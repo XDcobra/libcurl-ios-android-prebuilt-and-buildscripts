@@ -10,6 +10,8 @@ MAVEN_REPO_PATH="$REPO_ROOT/maven-repo"
 
 # Deploy both variants: libcurl-core and libcurl-openssl
 for VARIANT in "core" "openssl"; do
+  cd "$REPO_ROOT"
+
     echo "=========================================="
     echo "Deploying libcurl-${VARIANT}..."
     echo "=========================================="
