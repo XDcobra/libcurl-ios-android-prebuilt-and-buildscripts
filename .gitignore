@@ -1,0 +1,31 @@
+# Build directories
+build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Extracted artifacts
+openssl_extracted/
+openssl-*.zip
+libcurl-*.zip
+aar-content/
+libcurl-*.aar
+
+# libcurl source
+libcurl/
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Editor
+.vscode/
+.idea/
+*.iml
+
+# Python cache
+__pycache__/
+*.pyc
