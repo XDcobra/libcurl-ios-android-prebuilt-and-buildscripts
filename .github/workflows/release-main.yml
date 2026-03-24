@@ -1,0 +1,52 @@
+name: Release Main
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version Tag (e.g. v1.0.0-1). Leave empty to use reference name.'
+        required: false
+        type: string
+      openssl_version:
+        description: 'OpenSSL Version Tag (e.g. v3.6.1-1). Defaults to v3.6.1-1.'
+        required: false
+        type: string
+        default: 'v3.6.1-1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_android:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+      openssl_version: ${{ inputs.openssl_version || 'v3.6.1-1' }}
+
+  build_ios:
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+      openssl_version: ${{ inputs.openssl_version || 'v3.6.1-1' }}
+
+  release_github:
+    needs: [build_android, build_ios]
+    uses: ./.github/workflows/release-github.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+    secrets: inherit
+
+  release_maven:
+    needs: [build_android]
+    uses: ./.github/workflows/release-maven.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+    secrets:
+      MAVEN_REPO_PAT: ${{ secrets.MAVEN_REPO_PAT }}

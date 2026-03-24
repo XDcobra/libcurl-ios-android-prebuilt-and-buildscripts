@@ -1,0 +1,73 @@
+name: Build iOS
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      openssl_version:
+        required: false
+        type: string
+        default: 'v3.6.1-1'
+
+concurrency:
+  group: build-ios-${{ inputs.version || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_ios:
+    name: Build iOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Cache iOS Build
+        id: cache-ios
+        uses: actions/cache@v5
+        with:
+          path: build/ios
+          key: ${{ runner.os }}-ios-${{ inputs.version }}-${{ inputs.openssl_version }}-${{ hashFiles('build-ios.sh') }}
+
+      - name: Select Xcode
+        if: steps.cache-ios.outputs.cache-hit != 'true'
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Log Build Context
+        run: |
+          echo "version=${{ inputs.version }}"
+          echo "openssl_version=${{ inputs.openssl_version }}"
+          echo "cache_hit=${{ steps.cache-ios.outputs.cache-hit }}"
+          xcodebuild -version
+          cmake --version | head -1
+
+      - name: Build iOS Libraries
+        if: steps.cache-ios.outputs.cache-hit != 'true'
+        env:
+          OPENSSL_VERSION: ${{ inputs.openssl_version }}
+        run: |
+          chmod +x build-ios.sh
+          ./build-ios.sh
+
+      - name: Verify iOS Outputs
+        run: |
+          test -d build/ios/libcurl-core.xcframework
+          test -d build/ios/libcurl-openssl.xcframework
+          echo "Generated XCFrameworks:"
+          ls -la build/ios/*.xcframework
+
+      - name: ZIP Artifacts
+        run: |
+          cd build/ios
+          zip -r ../../libcurl-ios.zip *.xcframework
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: libcurl-ios
+          path: libcurl-ios.zip
+          retention-days: 1

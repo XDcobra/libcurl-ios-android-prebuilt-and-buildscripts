@@ -1,0 +1,56 @@
+name: Release Maven
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    secrets:
+      MAVEN_REPO_PAT:
+        required: true
+
+concurrency:
+  group: release-maven-${{ inputs.version || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  maven_release:
+    name: Deploy to Maven
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Build Repo
+        uses: actions/checkout@v6
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: libcurl-android
+
+      - name: Extract Android Target
+        run: |
+          mkdir -p android_out
+          unzip libcurl-android.zip -d android_out
+
+      - name: Checkout Maven Repo
+        uses: actions/checkout@v6
+        with:
+          repository: XDcobra/maven
+          token: ${{ secrets.MAVEN_REPO_PAT }}
+          path: maven-repo
+
+      - name: Deploy to GitHub Pages Maven
+        run: |
+          chmod +x scripts/deploy-maven.sh
+          scripts/deploy-maven.sh "${{ inputs.version }}" "$(pwd)"
+          
+      - name: Commit Maven Changes
+        run: |
+          cd maven-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git add "com/xdcobra/libcurl/"
+          git commit -m "Publish com.xdcobra.libcurl:*:${{ inputs.version }}" || echo "No changes to commit"
+          git push
