@@ -2,6 +2,28 @@
 
 Prebuilt static and shared libraries for **libcurl** targeting both iOS and Android platforms, with optional **OpenSSL** support.
 
+## Quick Usage
+
+### Android (via Maven)
+
+Add the repository to your `build.gradle` and add the AAR dependency:
+
+```gradle
+repositories {
+  maven { url 'https://xdcobra.github.io/maven' }
+}
+
+dependencies {
+  implementation 'com.xdcobra.libcurl:libcurl-openssl:<VERSION>'
+}
+```
+
+### iOS (via XCFramework)
+
+1. Download the latest `libcurl-openssl.xcframework` from the [GitHub Releases](https://github.com/XDcobra/libcurl-ios-android-prebuilt-and-buildscripts/releases).
+2. Add the `openssl.xcframework` to your Xcode project under **Frameworks, Libraries, and Embedded Content**.
+3. Set the embed status to **Embed & Sign** (if linking dynamically) or **Do Not Embed** (if linking statically, which is recommended for `libcurl.a` wrapped in XCFramework).
+
 ## Overview
 
 This repository automates the building and distribution of libcurl libraries for iOS and Android. It provides:
@@ -153,24 +175,6 @@ build-android.sh             # Android build script
 build-ios.sh                 # iOS build script
 README.md                    # This file
 ```
-
-## Usage in Flutter/Native Apps
-
-### Android (Gradle)
-
-```gradle
-repositories {
-    maven { url 'https://xdcobra.github.io/maven' }
-}
-
-dependencies {
-    implementation 'com.xdcobra.libcurl:libcurl-openssl:1.0.0'
-}
-```
-
-### iOS (CocoaPods/Manual)
-
-Download the XCFramework from [GitHub Releases](https://github.com/XDcobra/libcurl-ios-android-prebuilt-and-buildscripts/releases) and integrate into your Xcode project.
 
 ## Troubleshooting
 
