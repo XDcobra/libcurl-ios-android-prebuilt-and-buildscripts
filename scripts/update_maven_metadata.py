@@ -28,8 +28,16 @@ def update_maven_metadata(group_id, artifact_id, version, artifact_dir):
     # Sort versions properly
     def version_key(v):
         import re
-        return [int(x) if x.isdigit() else x 
-                for x in re.split(r'[^0-9A-Za-z]', v)]
+        # Return comparable typed tokens to avoid int/str comparison errors.
+        key = []
+        for token in re.split(r'[^0-9A-Za-z]+', v):
+            if not token:
+                continue
+            if token.isdigit():
+                key.append((0, int(token)))
+            else:
+                key.append((1, token.lower()))
+        return key
     versions.sort(key=version_key)
     
     # Load or create XML
