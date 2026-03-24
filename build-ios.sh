@@ -23,6 +23,16 @@ rm -rf openssl_extracted
 mkdir -p openssl_extracted
 unzip -oq "$OPENSSL_ZIP" -d openssl_extracted
 
+find_first_existing_file() {
+    for candidate in "$@"; do
+        if [ -f "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
 OPENSSL_XCFW_ROOT="$(pwd)/openssl_extracted/openssl.xcframework"
 if [ ! -d "$OPENSSL_XCFW_ROOT" ]; then
     echo "Error: Missing OpenSSL XCFramework at $OPENSSL_XCFW_ROOT"
@@ -63,6 +73,22 @@ if [ ! -d "libcurl" ]; then
 fi
 
 LIBCURL_SRC="$(pwd)/libcurl"
+
+CURL_LICENSE_FILE="$(find_first_existing_file \
+    "$LIBCURL_SRC/COPYING" \
+    "$LIBCURL_SRC/LICENSE" \
+    "$LIBCURL_SRC/LICENSE.txt")"
+
+if [ -z "$CURL_LICENSE_FILE" ]; then
+    echo "Error: Could not locate libcurl license file in source checkout"
+    exit 1
+fi
+
+OPENSSL_LICENSE_FILE="$(find_first_existing_file \
+    "$OPENSSL_XCFW_ROOT/Resources/LICENSES/OPENSSL-LICENSE.txt" \
+    "$(pwd)/openssl_extracted/licenses/openssl/OPENSSL-LICENSE.txt" \
+    "$(pwd)/openssl_extracted/licenses/openssl/LICENSE.txt" \
+    "$(pwd)/openssl_extracted/licenses/OPENSSL-LICENSE.txt")"
 
 build_with_cmake() {
     local variant="$1"
@@ -180,6 +206,21 @@ for VARIANT in "core" "openssl"; do
         -library "$OUT_DIR/libcurl-$VARIANT/device_arm64/libcurl.a" -headers "$OUT_DIR/libcurl-$VARIANT/include" \
         -library "$OUT_DIR/libcurl-$VARIANT/simulator/libcurl.a" -headers "$OUT_DIR/libcurl-$VARIANT/include" \
         -output "$OUT_DIR/libcurl-$VARIANT.xcframework"
+
+    XCFRAMEWORK_LICENSE_DIR="$OUT_DIR/libcurl-$VARIANT.xcframework/Resources/LICENSES"
+    mkdir -p "$XCFRAMEWORK_LICENSE_DIR/libcurl"
+    cp "$CURL_LICENSE_FILE" "$XCFRAMEWORK_LICENSE_DIR/libcurl/CURL-LICENSE.txt"
+
+    if [ "$VARIANT" = "openssl" ]; then
+        if [ -z "$OPENSSL_LICENSE_FILE" ]; then
+            echo "Error: Could not locate OpenSSL license in extracted artifacts"
+            echo "Please use an OpenSSL release that contains license files in the ZIP artifact."
+            exit 1
+        fi
+
+        mkdir -p "$XCFRAMEWORK_LICENSE_DIR/openssl"
+        cp "$OPENSSL_LICENSE_FILE" "$XCFRAMEWORK_LICENSE_DIR/openssl/OPENSSL-LICENSE.txt"
+    fi
 
     echo "✓ Created $OUT_DIR/libcurl-$VARIANT.xcframework"
 done

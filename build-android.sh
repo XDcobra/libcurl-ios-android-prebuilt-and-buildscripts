@@ -47,6 +47,16 @@ rm -rf openssl_extracted
 mkdir -p openssl_extracted
 unzip -oq "$OPENSSL_ZIP" -d openssl_extracted
 
+find_first_existing_file() {
+    for candidate in "$@"; do
+        if [ -f "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Setup libcurl source code
 if [ ! -d "libcurl" ]; then
     echo "Cloning libcurl from GitHub..."
@@ -54,6 +64,22 @@ if [ ! -d "libcurl" ]; then
 fi
 
 cd libcurl
+
+CURL_LICENSE_FILE="$(find_first_existing_file \
+    "$(pwd)/COPYING" \
+    "$(pwd)/LICENSE" \
+    "$(pwd)/LICENSE.txt")"
+
+if [ -z "$CURL_LICENSE_FILE" ]; then
+    echo "Error: Could not locate libcurl license file in source checkout"
+    exit 1
+fi
+
+OPENSSL_LICENSE_FILE="$(find_first_existing_file \
+    "$(pwd)/../openssl_extracted/licenses/openssl/OPENSSL-LICENSE.txt" \
+    "$(pwd)/../openssl_extracted/licenses/openssl/LICENSE.txt" \
+    "$(pwd)/../openssl_extracted/licenses/OPENSSL-LICENSE.txt" \
+    "$(pwd)/../openssl_extracted/Resources/LICENSES/OPENSSL-LICENSE.txt")"
 
 ABIS=("armeabi-v7a" "arm64-v8a" "x86" "x86_64")
 
@@ -66,6 +92,21 @@ for VARIANT in "core" "openssl"; do
     
     VARIANT_OUT="$OUT_DIR/libcurl-${VARIANT}"
     mkdir -p "$VARIANT_OUT/jniLibs"
+
+    VARIANT_LICENSE_DIR="$VARIANT_OUT/licenses"
+    mkdir -p "$VARIANT_LICENSE_DIR/libcurl"
+    cp "$CURL_LICENSE_FILE" "$VARIANT_LICENSE_DIR/libcurl/CURL-LICENSE.txt"
+
+    if [ "$VARIANT" = "openssl" ]; then
+        if [ -z "$OPENSSL_LICENSE_FILE" ]; then
+            echo "Error: Could not locate OpenSSL license in extracted artifacts"
+            echo "Please use an OpenSSL release that contains license files in the ZIP artifact."
+            exit 1
+        fi
+
+        mkdir -p "$VARIANT_LICENSE_DIR/openssl"
+        cp "$OPENSSL_LICENSE_FILE" "$VARIANT_LICENSE_DIR/openssl/OPENSSL-LICENSE.txt"
+    fi
     
     for i in "${!ABIS[@]}"; do
         ABI="${ABIS[$i]}"

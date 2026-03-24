@@ -27,11 +27,28 @@ for VARIANT in "core" "openssl"; do
     # Create AAR file from the variant's jniLibs
     echo "Creating AAR for $VARIANT..."
     AAR_CONTENT_DIR="/tmp/aar-content-${VARIANT}"
+    rm -rf "$AAR_CONTENT_DIR"
     mkdir -p "$AAR_CONTENT_DIR/jni"
+    mkdir -p "$AAR_CONTENT_DIR/META-INF/licenses"
     
     # Copy jniLibs safely
     if [ -d "android_out/libcurl-${VARIANT}/jniLibs" ]; then
         cp -r android_out/libcurl-${VARIANT}/jniLibs/* "$AAR_CONTENT_DIR/jni/" || true
+    fi
+
+    # Copy license files into AAR to satisfy redistribution requirements
+    if [ -d "android_out/libcurl-${VARIANT}/licenses" ]; then
+      cp -r android_out/libcurl-${VARIANT}/licenses/* "$AAR_CONTENT_DIR/META-INF/licenses/" || true
+    fi
+
+    if [ ! -f "$AAR_CONTENT_DIR/META-INF/licenses/libcurl/CURL-LICENSE.txt" ]; then
+      echo "Error: Missing libcurl license file for $VARIANT"
+      exit 1
+    fi
+
+    if [ "$VARIANT" = "openssl" ] && [ ! -f "$AAR_CONTENT_DIR/META-INF/licenses/openssl/OPENSSL-LICENSE.txt" ]; then
+      echo "Error: Missing OpenSSL license file for $VARIANT"
+      exit 1
     fi
     
     # Create a minimal AndroidManifest.xml
