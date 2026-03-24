@@ -5,6 +5,7 @@
 set -e
 
 VERSION="${1:?Version is required}"
+VERSION="${VERSION#v}"
 REPO_ROOT="${2:-.}"
 MAVEN_REPO_PATH="$REPO_ROOT/maven-repo"
 
@@ -15,6 +16,7 @@ for VARIANT in "core" "openssl"; do
     echo "=========================================="
     echo "Deploying libcurl-${VARIANT}..."
     echo "=========================================="
+    echo "Maven version: $VERSION"
     
     GROUP_ID="com.xdcobra.libcurl"
     ARTIFACT_ID="libcurl-${VARIANT}"

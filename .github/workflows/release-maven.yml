@@ -40,10 +40,17 @@ jobs:
           token: ${{ secrets.MAVEN_REPO_PAT }}
           path: maven-repo
 
+      - name: Normalize Version
+        id: normalize
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to GitHub Pages Maven
         run: |
           chmod +x scripts/deploy-maven.sh
-          scripts/deploy-maven.sh "${{ inputs.version }}" "$(pwd)"
+          scripts/deploy-maven.sh "${{ steps.normalize.outputs.version }}" "$(pwd)"
           
       - name: Commit Maven Changes
         run: |
@@ -52,5 +59,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           git add "com/xdcobra/libcurl/"
-          git commit -m "Publish com.xdcobra.libcurl:*:${{ inputs.version }}" || echo "No changes to commit"
+          git commit -m "Publish com.xdcobra.libcurl:*:${{ steps.normalize.outputs.version }}" || echo "No changes to commit"
           git push
