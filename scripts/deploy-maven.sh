@@ -54,6 +54,17 @@ for VARIANT in "core" "openssl"; do
       echo "Error: Missing OpenSSL license file for $VARIANT"
       exit 1
     fi
+
+    if [ "$VARIANT" = "openssl" ]; then
+      for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+        d="$AAR_CONTENT_DIR/jni/$abi"
+        if [ ! -f "$d/libcurl.so" ] || [ ! -f "$d/libcrypto.so" ] || [ ! -f "$d/libssl.so" ]; then
+          echo "Error: libcurl-openssl AAR must contain libcurl.so, libcrypto.so, libssl.so in $d"
+          ls -la "$d" 2>/dev/null || true
+          exit 1
+        fi
+      done
+    fi
     
     # Create a minimal AndroidManifest.xml
     mkdir -p "$AAR_CONTENT_DIR"
@@ -75,7 +86,7 @@ EOF
     POM_FILE="$VERSION_DIR/$ARTIFACT_ID-$VERSION.pom"
     
     if [ "$VARIANT" = "openssl" ]; then
-      DESCRIPTION="libcurl with OpenSSL Support for Android"
+      DESCRIPTION="libcurl with OpenSSL (shared) for Android — AAR includes libcurl.so, libcrypto.so, libssl.so per ABI"
     else
       DESCRIPTION="libcurl Core (No SSL) for Android"
     fi

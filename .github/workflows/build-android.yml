@@ -52,6 +52,19 @@ jobs:
           chmod +x build-android.sh
           ./build-android.sh
 
+      - name: Verify libcurl-openssl bundles OpenSSL shared libs
+        run: |
+          set -e
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            d="build/android/libcurl-openssl/jniLibs/$abi"
+            if [ ! -f "$d/libcurl.so" ] || [ ! -f "$d/libcrypto.so" ] || [ ! -f "$d/libssl.so" ]; then
+              echo "Error: expected libcurl.so, libcrypto.so, libssl.so in $d"
+              ls -la "$d" 2>/dev/null || true
+              exit 1
+            fi
+          done
+          echo "OK: libcurl-openssl per-ABI jniLibs complete"
+
       - name: ZIP Artifacts
         run: |
           cd build/android

@@ -30,12 +30,11 @@ This repository automates the building and distribution of libcurl libraries for
 
 - **Two Variants:**
   - `libcurl-core`: libcurl without SSL/TLS support
-  - `libcurl-openssl`: libcurl statically linked against OpenSSL
+  - `libcurl-openssl`: libcurl linked **dynamically** against OpenSSL; the AAR ships **`libcurl.so`**, **`libcrypto.so`**, and **`libssl.so`** per ABI so the Android loader can resolve `DT_NEEDED` at runtime.
 
 - **Android Artifacts:**
   - Shared libraries (`.so`) for all major ABIs (arm64-v8a, armeabi-v7a, x86, x86_64)
-  - Optional static libraries (`.a`)
-  - Maven deployment as AAR packages
+  - Maven deployment as AAR packages (`libcurl-core`: only `libcurl.so`; `libcurl-openssl`: curl + OpenSSL `.so` set)
 
 - **iOS Artifacts:**
   - XCFramework for both device and simulator architectures
@@ -72,7 +71,7 @@ chmod +x build-android.sh
 
 Output: `build/android/`
 - `libcurl-core/jniLibs/{abi}/libcurl.so`
-- `libcurl-openssl/jniLibs/{abi}/libcurl.so`
+- `libcurl-openssl/jniLibs/{abi}/libcurl.so`, `libcrypto.so`, `libssl.so`
 
 ### Build iOS
 

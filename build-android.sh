@@ -32,6 +32,7 @@ OPENSSL_VERSION="${OPENSSL_VERSION:-v3.6.1-1}"
 mkdir -p "$OUT_DIR"
 
 echo "Building libcurl for Android (API Level $API_LEVEL) with OpenSSL $OPENSSL_VERSION..."
+echo "libcurl-openssl: links dynamically against OpenSSL shared libs; AAR bundles libcurl.so + libcrypto.so + libssl.so per ABI."
 
 # Download OpenSSL artifacts if not already present
 OPENSSL_ZIP="openssl-android.zip"
@@ -135,13 +136,14 @@ for VARIANT in "core" "openssl"; do
         CMAKE_FLAGS="$CMAKE_FLAGS -DCMAKE_ANDROID_NDK=$ANDROID_NDK_ROOT"
         
         if [ "$VARIANT" = "openssl" ]; then
-            # Point to our extracted OpenSSL static libraries
+            # Link libcurl against OpenSSL shared libs (.so); same files are bundled into the AAR per ABI.
             OPENSSL_LIB_DIR="$(pwd)/../openssl_extracted/jniLibs/$ABI"
             OPENSSL_INCLUDE_DIR="$(pwd)/../openssl_extracted/include"
             OPENSSL_ROOT_DIR="$(pwd)/../openssl_extracted"
 
-            if [ ! -f "$OPENSSL_LIB_DIR/libcrypto.a" ] || [ ! -f "$OPENSSL_LIB_DIR/libssl.a" ]; then
-                echo "Error: OpenSSL static libs not found for ABI '$ABI' in $OPENSSL_LIB_DIR"
+            if [ ! -f "$OPENSSL_LIB_DIR/libcrypto.so" ] || [ ! -f "$OPENSSL_LIB_DIR/libssl.so" ]; then
+                echo "Error: OpenSSL shared libs not found for ABI '$ABI' in $OPENSSL_LIB_DIR"
+                echo "Expected libcrypto.so and libssl.so (from openssl-android.zip / shared OpenSSL build)."
                 exit 1
             fi
 
@@ -153,9 +155,9 @@ for VARIANT in "core" "openssl"; do
             CMAKE_FLAGS="$CMAKE_FLAGS -DCURL_USE_OPENSSL=ON"
             CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR"
             CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_INCLUDE_DIR=$OPENSSL_INCLUDE_DIR"
-            CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_USE_STATIC_LIBS=TRUE"
-            CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_CRYPTO_LIBRARY=$OPENSSL_LIB_DIR/libcrypto.a"
-            CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_SSL_LIBRARY=$OPENSSL_LIB_DIR/libssl.a"
+            CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_USE_STATIC_LIBS=OFF"
+            CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_CRYPTO_LIBRARY=$OPENSSL_LIB_DIR/libcrypto.so"
+            CMAKE_FLAGS="$CMAKE_FLAGS -DOPENSSL_SSL_LIBRARY=$OPENSSL_LIB_DIR/libssl.so"
         else
             # Build without SSL support
             CMAKE_FLAGS="$CMAKE_FLAGS -DCURL_USE_OPENSSL=OFF"
@@ -187,6 +189,13 @@ for VARIANT in "core" "openssl"; do
         if [ -f "$BUILD_DIR/lib/libcurl.so" ]; then
             cp "$BUILD_DIR/lib/libcurl.so" "$ABI_LIB/libcurl.so"
             echo "✓ Built libcurl.so for $ABI"
+        fi
+
+        # Bundle OpenSSL .so into the same jniLibs folder so Gradle packages them with the AAR (runtime DT_NEEDED).
+        if [ "$VARIANT" = "openssl" ]; then
+            cp -L "$OPENSSL_LIB_DIR/libcrypto.so" "$ABI_LIB/libcrypto.so"
+            cp -L "$OPENSSL_LIB_DIR/libssl.so" "$ABI_LIB/libssl.so"
+            echo "✓ Bundled libcrypto.so + libssl.so for $ABI"
         fi
         
         # Copy headers (first time only to save space)
